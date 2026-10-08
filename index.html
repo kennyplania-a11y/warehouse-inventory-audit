@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Inventory Audit & Discrepancy Manager</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f6f8;
+            color: #1f2937;
+        }
+
+        header {
+            background: #172554;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        header h1 {
+            font-size: 24px;
+        }
+
+        header p {
+            margin-top: 5px;
+            color: #dbeafe;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 25px auto;
+            padding: 0 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        }
+
+        .stat h3 {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .stat p {
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            margin-bottom: 25px;
+        }
+
+        .card h2 {
+            margin-bottom: 15px;
+        }
+
+        .upload-box {
+            border: 2px dashed #94a3b8;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        input[type="file"] {
+            margin: 15px 0;
+        }
+
+        button {
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .approve {
+            background: #16a34a;
+            color: white;
+            margin-right: 5px;
+        }
+
+        .reject {
+            background: #dc2626;
+            color: white;
+        }
+
+        .clear {
+            background: #64748b;
+            color: white;
+        }
+
+        button:hover {
+            opacity: .85;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+        }
+
+        th {
+            background: #f1f5f9;
+        }
+
+        .badge {
+            padding: 5px 9px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .approved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 25px;
+            color: #64748b;
+        }
+
+        @media (max-width: 800px) {
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            table {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Warehouse Inventory Audit & Discrepancy Manager</h1>
+    <p>Inventory audit and write-off management system</p>
+</header>
+
+<div class="container">
+
+    <!-- DASHBOARD -->
+    <div class="stats">
+
+        <div class="stat">
+            <h3>Total Items</h3>
+            <p id="totalItems">0</p>
+        </div>
+
+        <div class="stat">
+            <h3>Discrepancies</h3>
+            <p id="totalDiscrepancies">0</p>
+        </div>
+
+        <div class="stat">
+            <h3>Pending Review</h3>
+            <p id="pendingCount">0</p>
+        </div>
+
+        <div class="stat">
+            <h3>Approved Write-offs</h3>
+            <p id="approvedCount">0</p>
+        </div>
+
+    </div>
+
+    <!-- UPLOAD -->
+    <div class="card">
+
+        <h2>📦 Inventory Clerk - Upload Stock Audit</h2>
+
+        <div class="upload-box">
+
+            <p>
+                Upload a CSV stock audit sheet.
+            </p>
+
+            <p style="margin-top:8px;font-size:13px;color:#64748b;">
+                Format: Item, Expected Quantity, Actual Quantity
+            </p>
+
+            <input
+                type="file"
+                id="csvFile"
+                accept=".csv"
+            >
+
+            <br>
+
+            <button class="primary" onclick="uploadAudit()">
+                Upload Audit Sheet
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- AUDIT RECORDS -->
+    <div class="card">
+
+        <h2>📋 Inventory Audit Records</h2>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Expected</th>
+                    <th>Actual</th>
+                    <th>Difference</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+
+            <tbody id="inventoryTable">
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- MANAGER REVIEW -->
+    <div class="card">
+
+        <h2>👨‍💼 Manager Review & Write-off Authorization</h2>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Difference</th>
+                    <th>Review Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="reviewTable">
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script>
+
+let inventory = JSON.parse(
+    localStorage.getItem("inventoryData")
+) || [];
+
+
+function saveData() {
+
+    localStorage.setItem(
+        "inventoryData",
+        JSON.stringify(inventory)
+    );
+
+}
+
+
+function uploadAudit() {
+
+    const file =
+        document.getElementById("csvFile").files[0];
+
+    if (!file) {
+
+        alert("Please select a CSV file first.");
+
+        return;
+
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = function(event) {
+
+        const lines =
+            event.target.result
+            .split(/\r?\n/)
+            .filter(line => line.trim() !== "");
+
+        if (lines.length < 2) {
+
+            alert("CSV file has no inventory records.");
+
+            return;
+
+        }
+
+        inventory = [];
+
+        for (let i = 1; i < lines.length; i++) {
+
+            const columns =
+                lines[i].split(",");
+
+            if (columns.length < 3) continue;
+
+            const item =
+                columns[0].trim();
+
+            const expected =
+                Number(columns[1]);
+
+            const actual =
+                Number(columns[2]);
+
+            const difference =
+                actual - expected;
+
+            let status = "OK";
+
+            if (difference !== 0) {
+                status = "Pending";
+            }
+
+            inventory.push({
+
+                id: Date.now() + i,
+
+                item: item,
+
+                expected: expected,
+
+                actual: actual,
+
+                difference: difference,
+
+                status: status
+
+            });
+
+        }
+
+        saveData();
+
+        render();
+
+        alert("Inventory audit uploaded successfully!");
+
+    };
+
+    reader.readAsText(file);
+
+}
+
+
+function approve(id) {
+
+    const item =
+        inventory.find(x => x.id === id);
+
+    if (!item) return;
+
+    item.status = "Approved";
+
+    saveData();
+
+    render();
+
+}
+
+
+function reject(id) {
+
+    const item =
+        inventory.find(x => x.id === id);
+
+    if (!item) return;
+
+    item.status = "Rejected";
+
+    saveData();
+
+    render();
+
+}
+
+
+function render() {
+
+    const inventoryTable =
+        document.getElementById("inventoryTable");
+
+    const reviewTable =
+        document.getElementById("reviewTable");
+
+
+    inventoryTable.innerHTML = "";
+
+    reviewTable.innerHTML = "";
+
+
+    let discrepancies = 0;
+
+    let pending = 0;
+
+    let approved = 0;
+
+
+    inventory.forEach(item => {
+
+        if (item.difference !== 0) {
+            discrepancies++;
+        }
+
+        if (item.status === "Pending") {
+            pending++;
+        }
+
+        if (item.status === "Approved") {
+            approved++;
+        }
+
+
+        let badgeClass =
+            item.status.toLowerCase();
+
+
+        inventoryTable.innerHTML += `
+
+            <tr>
+
+                <td>${item.item}</td>
+
+                <td>${item.expected}</td>
+
+                <td>${item.actual}</td>
+
+                <td>${item.difference}</td>
+
+                <td>
+                    <span class="badge ${badgeClass}">
+                        ${item.status}
+                    </span>
+                </td>
+
+            </tr>
+
+        `;
+
+
+        if (item.difference !== 0) {
+
+            reviewTable.innerHTML += `
+
+                <tr>
+
+                    <td>${item.item}</td>
+
+                    <td>${item.difference}</td>
+
+                    <td>
+                        <span class="badge ${badgeClass}">
+                            ${item.status}
+                        </span>
+                    </td>
+
+                    <td>
+
+                        ${
+                            item.status === "Pending"
+
+                            ?
+
+                            `
+                            <button
+                                class="approve"
+                                onclick="approve(${item.id})">
+                                Approve Write-off
+                            </button>
+
+                            <button
+                                class="reject"
+                                onclick="reject(${item.id})">
+                                Reject
+                            </button>
+                            `
+
+                            :
+
+                            "No action required"
+                        }
+
+                    </td>
+
+                </tr>
+
+            `;
+
+        }
+
+    });
+
+
+    document.getElementById("totalItems")
+        .textContent = inventory.length;
+
+    document.getElementById("totalDiscrepancies")
+        .textContent = discrepancies;
+
+    document.getElementById("pendingCount")
+        .textContent = pending;
+
+    document.getElementById("approvedCount")
+        .textContent = approved;
+
+
+    if (inventory.length === 0) {
+
+        inventoryTable.innerHTML = `
+
+            <tr>
+                <td colspan="5" class="empty">
+                    No inventory audit records yet.
+                </td>
+            </tr>
+
+        `;
+
+        reviewTable.innerHTML = `
+
+            <tr>
+                <td colspan="4" class="empty">
+                    No discrepancies to review.
+                </td>
+            </tr>
+
+        `;
+
+    }
+
+}
+
+
+render();
+
+</script>
+
+</body>
+</html>
